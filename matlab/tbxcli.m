@@ -124,7 +124,7 @@ try
         varargout = cell(1, nargout);
         [varargout{:}] = feval(cmd_fun, Options, Commands{:});
     else
-        varargout = {1, nargout};
+        varargout = cell(1, nargout);
         feval(cmd_fun, Options, Commands{:});
     end
 catch err
