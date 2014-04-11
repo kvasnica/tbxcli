@@ -173,7 +173,7 @@ switch Options('format')
         error('TBXCLI:UnknownInput', 'Format "%s" is not supported.', Options('format'));
 end
 
-fprintf('\nCreated archive: %s\n', ArchiveName);
+fprintf('\nCreated archive: %s\n\n', ArchiveName);
 
 end
 
@@ -216,7 +216,7 @@ switch lower(UploadMethod)
         error('TBXCLI:UnknownInput', 'Upload method "%s" is not supported.', Options('format'));
 end
 
-fprintf('\nFile "%s" uploaded to "%s".\n', archive, Options('dest'));
+fprintf('\nFile "%s" uploaded to "%s".\n\n', archive, Options('dest'));
 
 end
 
