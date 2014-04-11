@@ -1,4 +1,4 @@
-function tbxcli(varargin)
+function varargout=tbxcli(varargin)
 % TBXCLI: command-line interface for tbxmanager.com
 %
 % Basic syntax:
@@ -120,7 +120,13 @@ switch lower(command)
 end
 
 try
-	feval(cmd_fun, Options, Commands{:});
+    if nargout>0 && nargout(cmd_fun)>0
+        varargout = cell(1, nargout);
+        [varargout{:}] = feval(cmd_fun, Options, Commands{:});
+    else
+        varargout = {1, nargout};
+        feval(cmd_fun, Options, Commands{:});
+    end
 catch err
 	if ~isempty(err.identifier) && isempty(strfind(err.identifier, 'TBXCLI'))
 		% unexpected error
@@ -136,7 +142,7 @@ end
 end
 
 %%
-function tbxcli_prepare(Options, varargin)
+function ArchiveName = tbxcli_prepare(Options, varargin)
 % Create a new archive from a given directory:
 %   tbxcli --package=mpt --version=1.0 --dir=mydir --format=zip --platform=all prepare
 %
