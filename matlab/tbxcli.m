@@ -6,6 +6,8 @@ function tbxcli(varargin)
 %   tbxcli version delete
 %   tbxcli link create
 %   tbxcli link delete
+%   tbxcli prepare
+%   tbxcli upload
 %
 % You will be prompted to enter additional required information via
 % keyboard, such as the package name, version ID, etc. You can store
@@ -92,6 +94,8 @@ end
 supported_commands = {'version', ...
 	'link', ...
 	'setup', ...
+    'prepare', ...
+    'upload', ...
 	'help'};
 try
 	command = tbx_expandChoice(lower(Commands{1}), supported_commands);
@@ -106,6 +110,10 @@ switch lower(command)
 		cmd_fun = @tbxcli_link;
 	case 'setup',
 		cmd_fun = @tbxcli_setup;
+    case 'prepare',
+        cmd_fun = @tbxcli_prepare;
+    case 'upload',
+        cmd_fun = @tbxcli_upload;
 	case 'help',
 		help(mfilename);
 		return
@@ -125,6 +133,109 @@ catch err
 end
 
 
+end
+
+%%
+function tbxcli_prepare(Options, varargin)
+% Create a new archive from a given directory:
+%   tbxcli --package=mpt --version=1.0 --dir=mydir --format=zip --platform=all prepare
+%
+% By default, --format=zip
+
+RequiredOptions = {'package', 'version', 'platform', 'dir'};
+Optional = { {'format', 'zip'} };
+
+% ask for values of missing options
+Options = tbxcli_askOptions(Options, RequiredOptions, Optional);
+
+% construct the filename
+ArchiveName = tbxcli_archive_name(Options);
+
+% ask when rewriting
+fid = fopen(ArchiveName, 'r');
+if fid~=-1
+    % file exists
+    fclose(fid);
+    fprintf('\nWARNING: file "%s" already exists!\n\n', ArchiveName);
+    answer = input('Overwrite? [y/n]: ', 's');
+    if lower(answer)~='y'
+        % abort
+        return
+    end
+end
+
+% create the archive
+switch Options('format')
+    case 'zip'
+        zip(ArchiveName, Options('dir'));
+        
+    otherwise
+        error('TBXCLI:UnknownInput', 'Format "%s" is not supported.', Options('format'));
+end
+
+fprintf('\nCreated archive: %s\n', ArchiveName);
+
+end
+
+%%
+function tbxcli_upload(Options, varargin)
+% Upload a given archive to a given URL
+%   tbxcli --package=mpt --version=1.0 --url=ssh://server upload METHOD
+%
+% Supported methods:
+%   * 'scp'
+
+if length(varargin)<2
+	error('TBXCLI:BADCOMMAND', 'At least two commands please');
+end
+UploadMethod = varargin{2};
+RequiredOptions = {'package', 'version', 'platform', 'dest'};
+Optional = { {'format', 'zip'} };
+
+% ask for values of missing options
+Options = tbxcli_askOptions(Options, RequiredOptions, Optional);
+
+% construct the filename
+archive = tbxcli_archive_name(Options);
+
+% does the file exist?
+fid = fopen(archive, 'r');
+if fid<0
+    error('TBXCLI:FileNotFound', 'File "%s" not found in the current directory.', archive);
+end
+fclose(fid);
+
+% upload using selected method
+switch lower(UploadMethod)
+    case 'scp'
+        cmd = sprintf('scp %s %s', archive, Options('dest'));
+        fprintf('\nExecuting "%s"\n', cmd);
+        system(cmd);
+        
+    otherwise
+        error('TBXCLI:UnknownInput', 'Upload method "%s" is not supported.', Options('format'));
+end
+
+fprintf('\nFile "%s" uploaded to "%s".\n', archive, Options('dest'));
+
+end
+
+
+%%
+function name = tbxcli_archive_name(Options)
+% Constructs the archive name based on PACKAGE, VERSION, and PLATFORM
+
+    function in = safestr(in)
+        unsafe = ' !@#$%^&*()-+={}[]\;'':"<>,.?/';
+        for i = 1:length(unsafe)
+            in = strrep(in, unsafe(i), '_');
+        end
+    end
+
+name = sprintf('%s_%s_%s.%s', safestr(Options('package')), ...
+    safestr(Options('version')), ...
+    safestr(Options('platform')), ...
+    Options('format'));
 end
 
 %%
@@ -366,7 +477,7 @@ out = char(encoder.encode(java.lang.String(in).getBytes()));
 end
 
 %%
-function Options = tbxcli_askOptions(Options, Required)
+function Options = tbxcli_askOptions(Options, Required, Optional)
 % asks for values of missing required options
 
 DoNotShow = { 'login', 'password' };
@@ -396,6 +507,17 @@ for f = Required
 	if ~Options.isKey(fname)
 		Options(fname) = input(sprintf('%s: ', capitalize(fname)), 's');
 	end
+end
+
+% fill in optional settings
+if nargin==3
+    for i=1:length(Optional)
+        key = Optional{i}{1};
+        value = Optional{i}{2};
+        if ~Options.isKey(key)
+            Options(key) = value;
+        end
+    end
 end
 
 end
