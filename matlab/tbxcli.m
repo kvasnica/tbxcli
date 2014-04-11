@@ -8,6 +8,7 @@ function varargout=tbxcli(varargin)
 %   tbxcli link delete
 %   tbxcli prepare
 %   tbxcli upload
+%   tbxcli make
 %
 % You will be prompted to enter additional required information via
 % keyboard, such as the package name, version ID, etc. You can store
@@ -96,6 +97,7 @@ supported_commands = {'version', ...
 	'setup', ...
     'prepare', ...
     'upload', ...
+    'make', ...
 	'help'};
 try
 	command = tbx_expandChoice(lower(Commands{1}), supported_commands);
@@ -114,6 +116,8 @@ switch lower(command)
         cmd_fun = @tbxcli_prepare;
     case 'upload',
         cmd_fun = @tbxcli_upload;
+    case 'make'
+        cmd_fun = @tbxcli_make;
 	case 'help',
 		help(mfilename);
 		return
@@ -138,6 +142,61 @@ catch err
 	end
 end
 
+
+end
+
+%%
+function tbxcli_make(~, varargin)
+% Creates, uploads and registers a new version of the package
+
+if length(varargin)<2
+	error('TBXCLI:BADCOMMAND', 'Provide the config structure as the second input');
+end
+config = varargin{2};
+assert(isstruct(config), 'The second input must be a config structure.');
+
+% make sure the config structure has all required fields
+required = { 'package', 'version', 'repository', 'platform', ...
+    'directory', 'format', 'destination', 'url', 'method', };
+for i = 1:length(required)
+    if ~isfield(config, required{i})
+        error('TBXCLI:WrongInput', 'Required field "%s" is missing.', required{i});
+    end
+end
+
+fprintf('\nMake in progress...\n');
+
+% create the distribution archive
+fname = tbxcli(['--package=' config.package], ...
+    ['--version=' config.version], ...
+    ['--platform=' config.platform], ...
+    ['--dir=' config.directory], ...
+    ['--format=' config.format], ...
+    'prepare');
+
+% upload the archive
+tbxcli(['--package=' config.package], ...
+    ['--version=' config.version], ...
+    ['--platform=' config.platform], ...
+    ['--dest=' config.destination], ...
+    'upload', config.method);
+
+% register the new version at tbxmanager
+fprintf('\nRegistering version %s\n', config.version);
+tbxcli(['--package=' config.package], ...
+    ['--version=' config.version], ...
+    ['--repository=' config.repository], ...
+    'version', 'create');
+
+% register the new download link
+fprintf('\nRegistering link %s\n', config.url);
+tbxcli(['--package=' config.package], ...
+    ['--version=' config.version], ...
+    ['--platform=' config.platform], ...
+    ['--url=' config.url], ...
+    'link', 'create');
+
+fprintf('\n...make finished\n');
 
 end
 
