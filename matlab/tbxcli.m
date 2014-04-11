@@ -163,6 +163,10 @@ for i = 1:length(required)
         error('TBXCLI:WrongInput', 'Required field "%s" is missing.', required{i});
     end
 end
+if config.url(end)=='/'
+    % strip the trailing slash from the url
+    config.url = config.url(1:end-1);
+end
 
 fprintf('\nMake in progress...\n');
 
@@ -193,7 +197,7 @@ fprintf('\nRegistering link %s\n', config.url);
 tbxcli(['--package=' config.package], ...
     ['--version=' config.version], ...
     ['--platform=' config.platform], ...
-    ['--url=' config.url], ...
+    ['--url=' [config.url '/' fname]], ...
     'link', 'create');
 
 fprintf('\n...make finished\n');
