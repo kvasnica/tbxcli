@@ -180,7 +180,7 @@ end
 %%
 function tbxcli_upload(Options, varargin)
 % Upload a given archive to a given URL
-%   tbxcli --package=mpt --version=1.0 --url=ssh://server upload METHOD
+%   tbxcli --package=mpt --version=1.0 --dest=ssh://server upload METHOD
 %
 % Supported methods:
 %   * 'scp'
